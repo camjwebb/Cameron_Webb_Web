@@ -102,6 +102,16 @@ December 10, 2024
         }
     });
 
+    // Event listener for screen tap (mobile devices)
+    document.addEventListener('touchstart', function (e) {
+        if (gameOver) {
+            resetGame(); // Restart the game if it's over
+        } else {
+            birdVelocity = lift; // Apply the increased lift on tap
+        }
+        e.preventDefault(); // Prevent default action (such as scrolling)
+    });
+
     // Function to update bird's position
     function updateBird() {
         birdVelocity += gravity; // Apply gravity
