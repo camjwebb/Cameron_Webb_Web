@@ -48,21 +48,34 @@ December 10, 2024
 </head>
 <body>
 
-<canvas id="gameCanvas" width="400" height="600"></canvas>
+<canvas id="gameCanvas"></canvas>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Function to set canvas size dynamically
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Recalculate game settings based on screen size
+        birdWidth = canvas.width * 0.15;  // Adjust bird width to 15% of screen width
+        birdHeight = birdWidth;  // Keep the bird proportional
+        pipeWidth = canvas.width * 0.12;  // Pipe width as a proportion of screen width
+        pipeGap = canvas.height * 0.25;  // Pipe gap adjusted to 25% of screen height
+        gravity = canvas.height / 600;  // Gravity is now proportional to the screen height
+        lift = gravity * -10;  // Lift is also adjusted
+    }
+
+    // Initial call to resize canvas
+    resizeCanvas();
+
+    // Adjust the canvas size whenever the window is resized
+    window.addEventListener('resize', resizeCanvas);
+
     // Game settings
-    const birdWidth = 60; // Bird width (actual image size)
-    const birdHeight = 60; // Bird height (actual image size)
-    const gravity = 0.6;
-    const lift = -7.5; // Lift value increased to make the bird fly three times higher
-    const pipeWidth = 50;
-    const pipeGap = 150;
-    const pipeSpeed = 2;
-    let birdX = 50;
+    let birdX = canvas.width * 0.1; // Adjust bird's initial x position
     let birdY = canvas.height / 2;
     let birdVelocity = 0;
     let score = 0;
@@ -72,23 +85,18 @@ December 10, 2024
     const birdImage = new Image();
     birdImage.src = 'assets/img/FlappyBird.png'; // Bird image
 
-    // Adjusted hitbox size
-    const hitboxWidth = birdWidth / 2; // Half the bird's width
-    const hitboxHeight = birdHeight / 2; // Half the bird's height
-
-    // Bird object
+    // Bird and Pipe objects
     function Bird() {
         this.x = birdX;
         this.y = birdY;
         this.velocity = birdVelocity;
     }
 
-    // Pipe object
     function Pipe(x, height, isGold) {
         this.x = x;
         this.height = height;
         this.width = pipeWidth;
-        this.isGold = isGold || false; // Whether this pipe is gold or not
+        this.isGold = isGold || false;
     }
 
     // Event listener for the space bar
@@ -122,7 +130,7 @@ December 10, 2024
     function updatePipes() {
         if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
             let pipeHeight = Math.floor(Math.random() * (canvas.height - pipeGap));
-            let isGold = pipes.length % 5 === 4; // Make every 5th pipe gold (fixed the index logic)
+            let isGold = pipes.length % 5 === 4; // Make every 5th pipe gold
             pipes.push(new Pipe(canvas.width, pipeHeight, isGold));
         }
 
