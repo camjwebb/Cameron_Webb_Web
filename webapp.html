@@ -1,0 +1,228 @@
+<!-- 
+Cameron Webb
+IS 201-001
+December 10, 2024 
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Game</title>
+    <style>
+        /* Set the background image for the entire page with zoom out */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/089918d8-99ff-45de-a084-3fe85d0e3fcc/dg34rsu-29a3d144-dc3f-473e-a949-f73a4ba1ef7c.png/v1/fit/w_608,h_457,q_70,strp/flappy_bird_backdrop_by_lenaxux_dg34rsu-375w-2x.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NDU3IiwicGF0aCI6IlwvZlwvMDg5OTE4ZDgtOTlmZi00NWRlLWEwODQtM2ZlODVkMGUzZmNjXC9kZzM0cnN1LTI5YTNkMTQ0LWRjM2YtNDczZS1hOTQ5LWY3M2E0YmExZWY3Yy5wbmciLCJ3aWR0aCI6Ijw9NjA4In1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmltYWdlLm9wZXJhdGlvbnMiXX0._FI7nnUO3ZCIz23z4_juaIbbiEa_LQd1lX6MK-0iUEE'); /* Example background image */
+            background-size: 100% 100%; /* Cover the entire screen */
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+
+        /* Style for the canvas */
+        canvas {
+            position: absolute;
+            z-index: 1;
+            border: 1px solid black;
+        }
+
+        /* Style for the game over message */
+        .center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            font-size: 25px;
+            font-family: cursive;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game settings
+    const birdWidth = 60; // Bird width (actual image size)
+    const birdHeight = 60; // Bird height (actual image size)
+    const gravity = 0.6;
+    const lift = -7.5; // Lift value increased to make the bird fly three times higher
+    const pipeWidth = 50;
+    const pipeGap = 150;
+    const pipeSpeed = 2;
+    let birdX = 50;
+    let birdY = canvas.height / 2;
+    let birdVelocity = 0;
+    let score = 0;
+    let pipes = [];
+    let gameOver = false;
+    let gameInterval;
+    const birdImage = new Image();
+    birdImage.src = 'assets/img/FlappyBird.png'; // Bird image
+
+    // Adjusted hitbox size
+    const hitboxWidth = birdWidth / 2; // Half the bird's width
+    const hitboxHeight = birdHeight / 2; // Half the bird's height
+
+    // Bird object
+    function Bird() {
+        this.x = birdX;
+        this.y = birdY;
+        this.velocity = birdVelocity;
+    }
+
+    // Pipe object
+    function Pipe(x, height, isGold) {
+        this.x = x;
+        this.height = height;
+        this.width = pipeWidth;
+        this.isGold = isGold || false; // Whether this pipe is gold or not
+    }
+
+    // Event listener for the space bar
+    document.addEventListener('keydown', function (e) {
+        if (e.code === 'Space') {
+            if (gameOver) {
+                resetGame(); // Restart the game if it's over
+            } else {
+                birdVelocity = lift; // Apply the increased lift (three times the original height)
+            }
+        }
+    });
+
+    // Function to update bird's position
+    function updateBird() {
+        birdVelocity += gravity; // Apply gravity
+        birdY += birdVelocity; // Move bird vertically
+    }
+
+    // Function to update pipes
+    function updatePipes() {
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
+            let pipeHeight = Math.floor(Math.random() * (canvas.height - pipeGap));
+            let isGold = pipes.length % 5 === 4; // Make every 5th pipe gold (fixed the index logic)
+            pipes.push(new Pipe(canvas.width, pipeHeight, isGold));
+        }
+
+        // Move pipes to the left
+        pipes.forEach(function (pipe) {
+            pipe.x -= pipeSpeed;
+        });
+
+        // Remove off-screen pipes
+        pipes = pipes.filter(function (pipe) {
+            return pipe.x + pipe.width > 0;
+        });
+    }
+
+    // Function to detect collisions
+    function detectCollisions() {
+        // Define hitbox boundaries
+        const hitboxX = birdX + (birdWidth - hitboxWidth) / 2;
+        const hitboxY = birdY + (birdHeight - hitboxHeight) / 2;
+
+        // Check if bird hits the ground or the top
+        if (hitboxY + hitboxHeight > canvas.height || hitboxY < 0) {
+            endGame();
+        }
+
+        // Check if bird hits pipes
+        pipes.forEach(function (pipe) {
+            if (
+                hitboxX + hitboxWidth > pipe.x && // Right edge of the hitbox
+                hitboxX < pipe.x + pipeWidth && // Left edge of the hitbox
+                (hitboxY < pipe.height || hitboxY + hitboxHeight > pipe.height + pipeGap) // Top or bottom collision
+            ) {
+                endGame();
+            }
+        });
+    }
+
+    // Function to update score
+    function updateScore() {
+        pipes.forEach(function (pipe) {
+            if (pipe.x + pipe.width === birdX) {
+                score += pipe.isGold ? 2 : 1; // Gold pipes give 2 points, others give 1
+            }
+        });
+    }
+
+    // Function to draw everything on the canvas
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+        // Draw bird image
+        ctx.drawImage(birdImage, birdX, birdY, birdWidth, birdHeight);
+
+        // Draw pipes
+        pipes.forEach(function (pipe) {
+            ctx.fillStyle = pipe.isGold ? 'gold' : '#008000'; // Green for regular pipes, gold for every 5th pipe
+            ctx.fillRect(pipe.x, 0, pipe.width, pipe.height); // Top pipe
+            ctx.fillRect(pipe.x, pipe.height + pipeGap, pipe.width, canvas.height - pipe.height - pipeGap); // Bottom pipe
+        });
+
+        // Draw score
+        ctx.fillStyle = '#000';
+        ctx.font = '20px Arial';
+        ctx.fillText('Score: ' + score, 10, 30);
+
+        // Draw game over message if the game is over
+        if (gameOver) {
+            const message = ["Game Over", `Score: ${score}`, "Press Space to Restart"];
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            message.forEach((line, index) => {
+                ctx.fillText(
+                    line,
+                    canvas.width / 2 - ctx.measureText(line).width / 2,
+                    canvas.height / 2 + index * 30
+                );
+            });
+        }
+    }
+
+    // Game loop
+    function gameLoop() {
+        if (!gameOver) {
+            updateBird();
+            updatePipes();
+            detectCollisions();
+            updateScore();
+        }
+        draw();
+    }
+
+    // Function to end the game
+    function endGame() {
+        gameOver = true;
+        clearInterval(gameInterval); // Stop the game loop
+    }
+
+    // Function to reset the game
+    function resetGame() {
+        birdY = canvas.height / 2;
+        birdVelocity = 0;
+        pipes = [];
+        score = 0;
+        gameOver = false;
+        gameInterval = setInterval(gameLoop, 1000 / 60); // Restart the game loop
+    }
+
+    // Start the game loop
+    gameInterval = setInterval(gameLoop, 1000 / 60); // 60 frames per second
+</script>
+
+</body>
+</html>
